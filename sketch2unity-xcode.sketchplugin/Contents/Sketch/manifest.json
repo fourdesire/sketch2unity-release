@@ -1,0 +1,38 @@
+{
+    "name" : "sketch2unity-xcode",
+    "identifier" : "sketch2unity-xcode",
+    "version" : "1.0.0",
+    "description" : "Export json files for unity",
+    
+    "commands" : [
+                  {
+                  "name" : "export",
+                  "identifier" : "export",
+                  "script" : "script.cocoscript",
+                  "handler" : "onRun",
+                  "shortcut" : "ctrl shift x",
+                  },
+                  {
+                  "script" : "script.cocoscript",
+                  "handlers" : {
+                    "actions" : {
+                        "SelectionChanged.finish" : "onSelectionChanged"
+                    }
+                    }
+                  },
+                  {
+                  "script" : "sketch2unity.framework/sketch2unity.js",
+                  "handlers" : {
+                    "actions" : {
+                        "Startup" : "onStartup",
+                    }
+                    }
+                  }
+                  ],
+    "menu" : {
+        "title" : "sketch2unity-xcode",
+        "items" : [
+                   "export",
+                   ]
+    }
+}
