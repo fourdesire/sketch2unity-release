@@ -1,9 +1,7 @@
-
 @import 'sketch2unity.framework/sketch2unity.js'
 
 const contentType = "sketch2unity";
 const version = "1.0.0";
-var artboardName;
 var imageName = [];
 var repeatImages = [];
 var wrongGroups = [];
@@ -36,11 +34,11 @@ var onRun = function(context) {
         response = null;
         alert = null;
     }
+    
     if (select.length == 0) {
         [NSApp displayDialog:@"Please select the Artboard Group to export." withTitle:@"Nothing Selected"];
         return;
     }
-    
     if (select.length > 1) {
         [NSApp displayDialog:@"Please select only one Artboard Group to export." withTitle:@"Multiple Groups Selected"];
         return;
@@ -58,7 +56,9 @@ var onRun = function(context) {
     
     var clicked = panel.runModal();
     if (clicked == NSFileHandlingPanelOKButton) {
-        var exportPath = panel.URL().path() + "/sketch2unity/";
+        var group = select[0];
+        var groupName = String(group.name());
+        var exportPath = panel.URL().path() + "/sketch2unity/" + groupName + "/";
         var fileManager = NSFileManager.defaultManager();
         var response = 1000;  // OK:1000, Cancel:1001
         
@@ -71,9 +71,6 @@ var onRun = function(context) {
          var response = alert.runModal();
          }*/
         if (response == 1000) {
-            var group = select[0];
-            var groupName = String(group.name());
-            artboardName = groupName;
             log("-- export: " + groupName + "\nwith path: " + exportPath);
             
             var jsonObj = exportJSON(group, exportPath, customPanel);
@@ -164,7 +161,8 @@ function exportJSON (group, path, customPanel) {
     if (compGroup.length > 1) {
         wrongGroups.push(groupName);
         var groupComponents = [];
-    } else {
+    }
+    else {
         var groupComponents = exportComponents(compGroup, path, customPanel);
     }
     var groupChildren = exportChildren(childGroup, path, customPanel);
@@ -213,15 +211,17 @@ function exportComponents (subGroup, path, customPanel) {
         var layerID = String(layer.parentGroup().objectID());
         
         if (layerClass == "MSTextLayer") {
+            var layerText = String(layer.stringValue());
             var layerColor = "#" + String(layer.textColor().immutableModelObject().hexValue());
             var font = String(layer.fontPostscriptName());
+            log("test font: " + layer.font().fontName());
             var fontSize = layer.fontSize();
             var fontAutoFit = customPanel.getTextAuto(layerID);
             var layerAlign = textAlign2String(layer.textAlignment());
             
             compArray.push({
                            type: "text",
-                           text: layerName,
+                           text: layerText,
                            font_name: font,
                            font_size: fontSize,
                            auto_fit_to: fontAutoFit,
@@ -257,9 +257,8 @@ function exportComponents (subGroup, path, customPanel) {
 
 function exportImage (layer, path) {
     var layerName = String(layer.name());
-    if (isRepeat(layerName)) {
-        return;
-    }
+    if (isRepeat(layerName)) return;
+
     var sketch = require('sketch/dom');
     var options = {output: path + "images/"};
     sketch.export(layer, options);
