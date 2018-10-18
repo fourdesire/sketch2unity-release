@@ -1,4 +1,4 @@
-# sketch2unity
+# FDSketch2unity
 
 This module consists of two parts: **sketch2json** and **json2unity**.
 
