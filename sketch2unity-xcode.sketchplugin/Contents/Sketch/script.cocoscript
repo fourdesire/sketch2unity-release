@@ -10,8 +10,10 @@ var onRun = function(context) {
     const doc = context.document;
     const select = context.selection;
     
+    // TODO: fix custem panel
     var mocha = Mocha.sharedRuntime();
     var customPanel = mocha.valueForKey("Sketch2unity");
+    log("test customPanel: " + customPanel);
   
     if (doc.isDraft()) {
         [NSApp displayDialog:@"Please save the document to export." withTitle:@"Document Not Saved"];
@@ -58,6 +60,7 @@ var onRun = function(context) {
     if (clicked == NSFileHandlingPanelOKButton) {
         var group = select[0];
         var groupName = String(group.name());
+        //var exportPath = panel.URL().path() + "/sketch2unity v110/" + groupName + "/";
         var exportPath = panel.URL().path() + "/sketch2unity/" + groupName + "/";
         var fileManager = NSFileManager.defaultManager();
         var response = 1000;  // OK:1000, Cancel:1001
@@ -89,7 +92,13 @@ var onRun = function(context) {
                 for (var i = 0; i < wrongGroups.length; i++) {
                     alertMessage = alertMessage + (i+1) + ". " + wrongGroups[i] + "\n";
                 }
-                alertMessage = alertMessage + "Please check them out and export again!\n";
+                
+                /*if (groupAction.validate()) {
+                    alertMessage = alertMessage + "We have grouped the components for you and please check them out and modify their names if necessary.\n";
+                }
+                else {*/
+                    alertMessage = alertMessage + "Please check them out and export again!\n";
+                //}
             }
             [NSApp displayDialog:alertMessage withTitle:@"Document Exported"];
             
@@ -107,7 +116,8 @@ var onRun = function(context) {
 }
 
 var onSelectionChanged = function(context) {
-    sketch2unity.onSelectionChanged(context);
+    // TODO: fix custem panel
+    //sketch2unity.onSelectionChanged(context);
 };
 
 
@@ -116,7 +126,7 @@ function exportJSON (group, path, customPanel) {
     
     var groupName = String(group.name());
     var groupID = String(group.objectID());
-    //log("-> export json of group: " + groupName + " with id: " + groupID);
+    log("-> export json of group: " + groupName);
     
     var groupClass = String(group.className());
     var groupRotation = group.rotation();
@@ -128,6 +138,9 @@ function exportJSON (group, path, customPanel) {
     } else {
         var subGroup = group.layers();
     }
+    
+    //log("with subgroup.length: " + subGroup.length);
+    
     var layerFrame = group.absoluteRect();
     var parentFrame = group.parentGroup().absoluteRect();
     var layerXpos = layerFrame.x() + layerFrame.width()/2 - (parentFrame.x() + parentFrame.width()/2);
@@ -135,12 +148,19 @@ function exportJSON (group, path, customPanel) {
     
     var layerHeight = layerFrame.height();
     var layerWidth = layerFrame.width();
-    var maxAnchorX = customPanel.getMaxAnchorX(groupID);
+    // TODO: fix custem panel
+    /*var maxAnchorX = customPanel.getMaxAnchorX(groupID);
     var maxAnchorY = customPanel.getMaxAnchorY(groupID);
     var minAnchorX = customPanel.getMinAnchorX(groupID);
     var minAnchorY = customPanel.getMinAnchorY(groupID);
     var pivotX = customPanel.getPivotX(groupID);
-    var pivotY = customPanel.getPivotY(groupID);
+    var pivotY = customPanel.getPivotY(groupID);*/
+    var maxAnchorX = 0.5;
+    var maxAnchorY = 0.5;
+    var minAnchorX = 0.5;
+    var minAnchorY = 0.5;
+    var pivotX = 0.5;
+    var pivotY = 0.5;
     
     // get components & children infor
     var compGroup = [], childGroup = [];
@@ -149,8 +169,9 @@ function exportJSON (group, path, customPanel) {
         if (!layer.isVisible()) continue;
 
         var layerClass = String(layer.className());
+        log("with layerClass: " + layerClass);
         
-        if (layerClass == "MSTextLayer" || layerClass == "MSBitmapLayer" || layerClass == "MSShapeGroup") {
+        if (layerClass == "MSTextLayer" || layerClass == "MSBitmapLayer" || layerClass == "MSShapeGroup" || layerClass == "MSShapePathLayer" || layerClass == "MSRectangleShape") {
             compGroup.push(layer);
         }
         else if (layerClass == "MSLayerGroup" || layerClass == "MSSymbolInstance") {
@@ -158,8 +179,18 @@ function exportJSON (group, path, customPanel) {
         }
     }
     
-    if (compGroup.length > 1) {
+    //log("with compGroup.length: " + compGroup.length);
+    
+    if (compGroup.length > 1 || compGroup.length == 0) {
         wrongGroups.push(groupName);
+        //log("test enter wrong group");
+        /*for (var i = 1; i < compGroup.length; i++) {
+            var layer = compGroup[i];
+            var layerName = String(layer.name());
+            log("-- test group with compGroup: " + layerName);
+            layer.group(layerName);
+            childGroup.push(group);
+        }*/
         var groupComponents = [];
     }
     else {
@@ -204,51 +235,67 @@ function exportChildren (subGroup, path, customPanel) {
 function exportComponents (subGroup, path, customPanel) {
     var compArray = [];
     
-    for (var i = 0; i < subGroup.length; i++) {
-        var layer = subGroup[i];
-        var layerClass = String(layer.className());
-        var layerName = String(layer.name());
-        var layerID = String(layer.parentGroup().objectID());
-        
-        if (layerClass == "MSTextLayer") {
-            var layerText = String(layer.stringValue());
-            var layerColor = "#" + String(layer.textColor().immutableModelObject().hexValue());
-            var font = String(layer.fontPostscriptName());
-            log("test font: " + layer.font().fontName());
-            var fontSize = layer.fontSize();
-            var fontAutoFit = customPanel.getTextAuto(layerID);
-            var layerAlign = textAlign2String(layer.textAlignment());
+    try {
+        for (var i = 0; i < subGroup.length; i++) {
+            var layer = subGroup[i];
+            var layerClass = String(layer.className());
+            var layerName = String(layer.name());
+            var layerID = String(layer.parentGroup().objectID());
             
-            compArray.push({
-                           type: "text",
-                           text: layerText,
-                           font_name: font,
-                           font_size: fontSize,
-                           auto_fit_to: fontAutoFit,
-                           color: layerColor,
-                           alignment: layerAlign
-                           });
+            if (layerClass == "MSTextLayer") {
+                var layerText = String(layer.stringValue());
+                var layerColor = "#" + String(layer.textColor().immutableModelObject().hexValue());
+                var font = String(layer.fontPostscriptName()); // also works: layer.font().fontName());
+                var fontSize = layer.fontSize();
+                // TODO: fix custem panel
+                //var fontAutoFit = customPanel.getTextAuto(layerID);
+                var fontAutoFit = -1;
+                var layerAlign = textAlign2String(layer.textAlignment());
+                
+                compArray.push({
+                               type: "text",
+                               text: layerText,
+                               font_name: font,
+                               font_size: fontSize,
+                               auto_fit_to: fontAutoFit,
+                               color: layerColor,
+                               alignment: layerAlign
+                               });
+            }
+            else if (layerClass == "MSBitmapLayer") {
+                //log ("-- export bitmap: " + layerName);
+                compArray.push({
+                    type: "image",
+                    image: layerName,
+                    color: "#FFFFFF"
+                });
+                exportImage(layer, path);
+            }
+            else if (layerClass == "MSShapeGroup" || layerClass == "MSShapePathLayer" || layerClass == "MSRectangleShape") {
+                //log ("-- export shape: " + layerName);
+                var layerColor = String(firstVisibleColor(layer));
+                if (layerColor == "undefined") layerColor = "#FFFFFF";
+                else layerColor = "#" + layerColor;
+                
+                compArray.push({
+                               type: "image",
+                               image: layerName,
+                               color: layerColor
+                               });
+                exportImage(layer, path);
+            }
         }
-        else if (layerClass == "MSBitmapLayer") {
-            compArray.push({
-                type: "image",
-                image: layerName,
-                color: "#FFFFFF"
-            });
-            exportImage(layer, path);
-        }
-        else if (layerClass == "MSShapeGroup") {
-            var layerColor = String(firstVisibleColor(layer));
-            if (layerColor == "undefined") layerColor = "#FFFFFF";
-            else layerColor = "#" + layerColor;
-            
-            compArray.push({
-                           type: "image",
-                           image: layerName,
-                           color: layerColor
-                           });
-            exportImage(layer, path);
-        }
+    }
+    catch (error) {
+        log("--- test error ---");
+        log(error); // For some reason just shows you the line, column and sourceURL attributes!?
+        log(error.message); // The world ends here
+        log(error.sourceURL); // File path the error occured in
+        log(error.line);
+        log(error.column); // Line and column where the error occured
+        log(error.stack); // Gives you a string of the stack trace in the format [FunctionName]@[FilePath]:[Line]:[Column]
+        log("--- test error ---");
+        return [];
     }
     return compArray;
 }
