@@ -60,8 +60,8 @@ var onRun = function(context) {
     if (clicked == NSFileHandlingPanelOKButton) {
         var group = select[0];
         var groupName = String(group.name());
-        //var exportPath = panel.URL().path() + "/sketch2unity v110/" + groupName + "/";
-        var exportPath = panel.URL().path() + "/sketch2unity/" + groupName + "/";
+        var exportPath = panel.URL().path() + "/sketch2unity v110/" + groupName + "/";
+        //var exportPath = panel.URL().path() + "/sketch2unity/" + groupName + "/";
         var fileManager = NSFileManager.defaultManager();
         var response = 1000;  // OK:1000, Cancel:1001
         
@@ -138,9 +138,7 @@ function exportJSON (group, path, customPanel) {
     } else {
         var subGroup = group.layers();
     }
-    
-    //log("with subgroup.length: " + subGroup.length);
-    
+
     var layerFrame = group.absoluteRect();
     var parentFrame = group.parentGroup().absoluteRect();
     var layerXpos = layerFrame.x() + layerFrame.width()/2 - (parentFrame.x() + parentFrame.width()/2);
@@ -164,6 +162,7 @@ function exportJSON (group, path, customPanel) {
     
     // get components & children infor
     var compGroup = [], childGroup = [];
+   
     for (var i = 0; i < subGroup.length; i++) {
         var layer = subGroup[i];
         if (!layer.isVisible()) continue;
@@ -171,19 +170,16 @@ function exportJSON (group, path, customPanel) {
         var layerClass = String(layer.className());
         log("with layerClass: " + layerClass);
         
-        if (layerClass == "MSTextLayer" || layerClass == "MSBitmapLayer" || layerClass == "MSShapeGroup" || layerClass == "MSShapePathLayer" || layerClass == "MSRectangleShape") {
+        if (layerClass == "MSTextLayer" || layerClass == "MSBitmapLayer" || layerClass == "MSShapeGroup" || layerClass == "MSShapePathLayer" || layerClass == "MSRectangleShape" || layerClass == "MSOvalShape" || layerClass == "MSTriangleShape" || layerClass == "MSPolygonShap" || layerClass == "MSStarShape") {
             compGroup.push(layer);
         }
         else if (layerClass == "MSLayerGroup" || layerClass == "MSSymbolInstance") {
             childGroup.push(layer);
         }
     }
-    
-    //log("with compGroup.length: " + compGroup.length);
-    
-    if (compGroup.length > 1 || compGroup.length == 0) {
+  
+    if (compGroup.length > 1) {
         wrongGroups.push(groupName);
-        //log("test enter wrong group");
         /*for (var i = 1; i < compGroup.length; i++) {
             var layer = compGroup[i];
             var layerName = String(layer.name());
@@ -191,11 +187,8 @@ function exportJSON (group, path, customPanel) {
             layer.group(layerName);
             childGroup.push(group);
         }*/
-        var groupComponents = [];
     }
-    else {
-        var groupComponents = exportComponents(compGroup, path, customPanel);
-    }
+    var groupComponents = exportComponents(compGroup, path, customPanel);
     var groupChildren = exportChildren(childGroup, path, customPanel);
     
     var jsonObj = {
@@ -233,15 +226,16 @@ function exportChildren (subGroup, path, customPanel) {
 }
 
 function exportComponents (subGroup, path, customPanel) {
-    var compArray = [];
+    if (subGroup.length == 0) return [];
     
+    var compArray = [];
     try {
-        for (var i = 0; i < subGroup.length; i++) {
-            var layer = subGroup[i];
+        //for (var i = 0; i < subGroup.length; i++) {
+            var layer = subGroup[0];
             var layerClass = String(layer.className());
             var layerName = String(layer.name());
             var layerID = String(layer.parentGroup().objectID());
-            
+        
             if (layerClass == "MSTextLayer") {
                 var layerText = String(layer.stringValue());
                 var layerColor = "#" + String(layer.textColor().immutableModelObject().hexValue());
@@ -271,9 +265,9 @@ function exportComponents (subGroup, path, customPanel) {
                 });
                 exportImage(layer, path);
             }
-            else if (layerClass == "MSShapeGroup" || layerClass == "MSShapePathLayer" || layerClass == "MSRectangleShape") {
+            else if (layerClass == "MSShapeGroup" || layerClass == "MSShapePathLayer" || layerClass == "MSRectangleShape" || layerClass == "MSOvalShape" || layerClass == "MSTriangleShape" || layerClass == "MSPolygonShap" || layerClass == "MSStarShape") {
                 //log ("-- export shape: " + layerName);
-                var layerColor = String(firstVisibleColor(layer));
+                var layerColor = String(firstVisibleColor(layer, layerClass));
                 if (layerColor == "undefined") layerColor = "#FFFFFF";
                 else layerColor = "#" + layerColor;
                 
@@ -284,17 +278,10 @@ function exportComponents (subGroup, path, customPanel) {
                                });
                 exportImage(layer, path);
             }
-        }
+        //}
     }
     catch (error) {
-        log("--- test error ---");
-        log(error); // For some reason just shows you the line, column and sourceURL attributes!?
-        log(error.message); // The world ends here
-        log(error.sourceURL); // File path the error occured in
-        log(error.line);
-        log(error.column); // Line and column where the error occured
-        log(error.stack); // Gives you a string of the stack trace in the format [FunctionName]@[FilePath]:[Line]:[Column]
-        log("--- test error ---");
+        log("catch error: " + error);
         return [];
     }
     return compArray;
@@ -334,8 +321,11 @@ function textAlign2String (align) {
     else return "center";
 }
 
-function firstVisibleColor (layer) {
-    var fillArray = layer.style().fills();
+function firstVisibleColor (layer, layerClass) {
+    var fillArray = (layerClass == "MSShapePathLayer") ? layer.style().borders() : layer.style().fills();
+    log ("test fillArray: " + fillArray);
+    if (fillArray.length == 0) return "FFFFFF";
+    
     var fill = fillArray[0];
     return fill.color().immutableModelObject().hexValue();
 }
