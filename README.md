@@ -25,7 +25,8 @@ Move the package 'sketch2unity-xcode.sketchplugin' to the folder `~/Library/Appl
 5. Invisible layers will not be exported
 6. Set background color by adding a filled shape layer instead of setting background color to artboard
 7. Avoid using thickened line to generate shape like rectangle
-8. Set masks as invisible.
+8. Set masks as invisible
+9. Add a slice of icon composed of multiple layers or transparent bounds and put the slice in the group.
 
 ---
 ## json2unity
@@ -35,7 +36,7 @@ Move the package 'sketch2unity-xcode.sketchplugin' to the folder `~/Library/Appl
 1. Download the folder LoadPage
 2. Move json files and images folder to LoadPage folder
 3. If necessary, put fonts(.ttf, .otf) used in UI in a folder named Resources, and move the folder to **LoadPage folder**
-4. Check out how exported layout looks in LoadPage/index.html through WebGL.
+4. Check out how exported layout looks in FDPreiview/index.html through WebGL.
 
 [For Engineers]
 1. Compile and Run FDSketch2Unity
