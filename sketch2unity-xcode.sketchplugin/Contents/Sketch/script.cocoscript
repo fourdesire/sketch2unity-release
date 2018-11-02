@@ -11,10 +11,12 @@ var customPanelDisabled = false;
 var onRun = function(context) {
     const doc = context.document;
     const select = context.selection;
-    
+
     var mocha = Mocha.sharedRuntime();
     var customPanel = mocha.valueForKey("Sketch2unity");
-    if (customPanel == null || customPanel == "undefined") customPanelDisabled = true;
+    if (customPanel == null || customPanel === undefined) {
+        customPanelDisabled = true;
+    }
   
     if (doc.isDraft()) {
         [NSApp displayDialog:@"Please save the document to export." withTitle:@"Document Not Saved"];
@@ -88,7 +90,6 @@ var onRun = function(context) {
         imageName.length = 0;
         repeatImages.length = 0;
         wrongGroups.length = 0;
-
     }
     else {
         return;
@@ -166,28 +167,34 @@ function exportJSON (group, path, customPanel) {
             }
         }
       
-        if (compGroup.length > 1 && sliceLayer == null) {  // handle multiple components
-            wrongGroups.push(groupName);
+        if (compGroup.length > 1) {  // handle multiple components
             
-            for (var i = 0; i < compGroup.length; i++) {
-                var layer = compGroup[i];
-                var layerName = String(layer.name());
-
-                var newGroup = MSLayerGroup.new();
-                newGroup.setName(layerName);
-                newGroup.addLayers([layer]);
-                newGroup.resizeToFitChildrenWithOption(0);
-
-                group.addLayers([newGroup]);
-                group.removeLayer(layer);
-                group.resizeToFitChildrenWithOption(0);
-
-                childGroup.push(newGroup);
+            if (sliceLayer != null) {
+                compGroup = [sliceLayer];
             }
-            compGroup = [];
-        }
-        else if (sliceLayer != null) {
-            compGroup = [sliceLayer];
+            else {
+                wrongGroups.push(groupName);
+                for (var i = 0; i < compGroup.length; i++) {
+                    var layer = compGroup[i];
+                    var layerName = String(layer.name());
+                    
+                    if (layer.hasClippingMask() == 1) {
+                        layer.setIsVisible(false);
+                        continue;
+                    }
+                    var newGroup = MSLayerGroup.new();
+                    newGroup.setName(layerName);
+                    newGroup.addLayers([layer]);
+                    newGroup.resizeToFitChildrenWithOption(0);
+                    
+                    group.addLayers([newGroup]);
+                    group.removeLayer(layer);
+                    group.resizeToFitChildrenWithOption(0);
+                    
+                    childGroup.push(newGroup);
+                }
+                compGroup = [];
+            }
         }
         var groupComponents = exportComponents(compGroup, path, customPanel);
         var groupChildren = exportChildren(childGroup, path, customPanel);

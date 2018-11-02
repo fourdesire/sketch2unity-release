@@ -25,7 +25,7 @@ Move the package 'sketch2unity-xcode.sketchplugin' to the folder `~/Library/Appl
 5. Invisible layers will not be exported
 6. Set background color by adding a filled shape layer instead of setting background color to artboard
 7. Avoid using thickened line to generate shape like rectangle
-8. Set masks as invisible
+8. All masks will be set invisible automatically
 9. Add a slice of icon composed of multiple layers or transparent bounds and put the slice in the group.
 
 ---
