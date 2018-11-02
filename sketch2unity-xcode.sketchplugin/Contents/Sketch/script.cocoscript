@@ -163,6 +163,10 @@ function exportJSON (group, path, customPanel) {
                 sliceLayer = layer;
             }
             else if (layerClass == "MSTextLayer" || layerClass == "MSBitmapLayer" || layerClass == "MSShapeGroup" || layerClass == "MSShapePathLayer" || layerClass == "MSRectangleShape" || layerClass == "MSOvalShape" || layerClass == "MSTriangleShape" || layerClass == "MSPolygonShap" || layerClass == "MSStarShape") {
+                if (layer.hasClippingMask() == 1) {
+                    layer.setIsVisible(false);
+                    continue;
+                }
                 compGroup.push(layer);
             }
         }
@@ -178,10 +182,6 @@ function exportJSON (group, path, customPanel) {
                     var layer = compGroup[i];
                     var layerName = String(layer.name());
                     
-                    if (layer.hasClippingMask() == 1) {
-                        layer.setIsVisible(false);
-                        continue;
-                    }
                     var newGroup = MSLayerGroup.new();
                     newGroup.setName(layerName);
                     newGroup.addLayers([layer]);
