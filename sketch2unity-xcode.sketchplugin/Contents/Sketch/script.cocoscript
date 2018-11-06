@@ -79,17 +79,21 @@ var onRun = function(context) {
             }
         }
         if (wrongGroups.length > 0) {
-            alertMessage = alertMessage + "\nand more than one components in the groups: \n";
+            alertMessage = alertMessage + "\nwith more than one components in the groups: \n";
             for (var i = 0; i < wrongGroups.length; i++) {
                 alertMessage = alertMessage + (i+1) + ". " + wrongGroups[i] + "\n";
             }
             alertMessage = alertMessage + "We have grouped the components for you. Please check them out.\n";
         }
+        alertMessage = alertMessage + "\nLoad them in FDPreview by: " + "./sketch2unity/" + groupName + "/" + groupName + ".json\n";
         [NSApp displayDialog:alertMessage withTitle:@"Document Exported!"];
         
         imageName.length = 0;
         repeatImages.length = 0;
         wrongGroups.length = 0;
+        
+        //this.createWindow();
+        //this.createWebView();
     }
     else {
         return;
@@ -100,8 +104,41 @@ var onSelectionChanged = function(context) {
     sketch2unity.onSelectionChanged(context);
 };
 
+/*
+function createWindow () {
+    this.window = [[[NSWindow alloc]
+                    initWithContentRect:NSMakeRect(0, 0, 1024, 768)
+                    styleMask:NSTitledWindowMask | NSClosableWindowMask
+                    backing:NSBackingStoreBuffered
+                    defer:false
+                    ] autorelease];
+    
+    this.window.center();
+    this.window.makeKeyAndOrderFront_(this.window);
+    
+    return this;
+}
 
-
+function createWebView () {
+    // create frame for loading content in
+    var webviewFrame = NSMakeRect(0, 0, 1024, 768);
+    
+    // Request index.html
+    var webviewFolder   = COScript.currentCOScript().env().scriptURL.path().stringByDeletingLastPathComponent()  + "/FDPreview/";
+    var webviewHtmlFile = webviewFolder + "index.html";
+    var requestUrl      = [NSURL fileURLWithPath:webviewHtmlFile];
+    var urlRequest      = [NSMutableURLRequest requestWithURL:requestUrl];
+    
+    // Create the WebView, frame, and set content
+    this.webView = WebView.new();
+    this.webView.initWithFrame(webviewFrame);
+    this.webView.mainFrame().loadRequest(urlRequest);
+    this.window.contentView().addSubview(this.webView);
+    
+    return this;
+};
+*/
+ 
 function exportJSON (group, path, customPanel) {
     var groupName = String(group.name());
     var groupID = String(group.objectID());

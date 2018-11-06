@@ -1,7 +1,7 @@
 {
     "name" : "sketch2unity-xcode",
     "identifier" : "sketch2unity-xcode",
-    "version" : "1.2.0",
+    "version" : "1.2.1",
     "description" : "Export json files for unity",
     
     "commands" : [
