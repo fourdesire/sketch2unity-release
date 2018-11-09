@@ -9,7 +9,7 @@ var onStartup = function(context) {
       log("loadFramework: `" + frameworkName + "` already loaded.");
       return true;
     } else if ([mocha loadFrameworkWithName:frameworkName inDirectory:directory]) {
-      log("✅ loadFramework: `" + frameworkName + "` success!");
+      log("✅ loadFramework: `" + frameworkName + "` success!: " + directory);
       mocha.setValue_forKey_(true, frameworkName);
       COScript.currentCOScript().shouldKeepAround = true;  // Keep something asynchronous: tell Sketch to keep it around and not to garbage collect it
       return true;

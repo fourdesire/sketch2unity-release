@@ -92,8 +92,10 @@ var onRun = function(context) {
         repeatImages.length = 0;
         wrongGroups.length = 0;
         
-        //this.createWindow();
-        //this.createWebView();
+        this.createWindow();
+        this.createWebView();
+        [NSApp run];
+        
     }
     else {
         return;
@@ -104,11 +106,11 @@ var onSelectionChanged = function(context) {
     sketch2unity.onSelectionChanged(context);
 };
 
-/*
+
 function createWindow () {
     this.window = [[[NSWindow alloc]
                     initWithContentRect:NSMakeRect(0, 0, 1024, 768)
-                    styleMask:NSTitledWindowMask | NSClosableWindowMask
+                    styleMask:NSTitledWindowMask | NSClosableWindowMask | NSMiniaturizableWindowMask
                     backing:NSBackingStoreBuffered
                     defer:false
                     ] autorelease];
@@ -120,7 +122,6 @@ function createWindow () {
 }
 
 function createWebView () {
-    // create frame for loading content in
     var webviewFrame = NSMakeRect(0, 0, 1024, 768);
     
     // Request index.html
@@ -129,7 +130,6 @@ function createWebView () {
     var requestUrl      = [NSURL fileURLWithPath:webviewHtmlFile];
     var urlRequest      = [NSMutableURLRequest requestWithURL:requestUrl];
     
-    // Create the WebView, frame, and set content
     this.webView = WebView.new();
     this.webView.initWithFrame(webviewFrame);
     this.webView.mainFrame().loadRequest(urlRequest);
@@ -137,7 +137,7 @@ function createWebView () {
     
     return this;
 };
-*/
+
  
 function exportJSON (group, path, customPanel) {
     var groupName = String(group.name());
@@ -215,7 +215,7 @@ function exportJSON (group, path, customPanel) {
             }
             else {
                 wrongGroups.push(groupName);
-                for (var i = 0; i < compGroup.length; i++) {
+                /*for (var i = 0; i < compGroup.length; i++) {
                     var layer = compGroup[i];
                     var layerName = String(layer.name());
                     
@@ -224,12 +224,14 @@ function exportJSON (group, path, customPanel) {
                     newGroup.addLayers([layer]);
                     newGroup.resizeToFitChildrenWithOption(0);
                     
-                    group.addLayers([newGroup]);
+                    //group.layers().push(newGroup);
+                    //group.addLayers([newGroup]);
+                    group.addLayer_(newGroup);
                     group.removeLayer(layer);
                     group.resizeToFitChildrenWithOption(0);
                     
                     childGroup.push(newGroup);
-                }
+                }*/
                 compGroup = [];
             }
         }

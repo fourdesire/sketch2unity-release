@@ -2,9 +2,9 @@
 
 This module consists of two parts: **sketch2json** and **json2unity**.
 
-**sketch2json** is a sketch plugin that generates json files and images in your Sketch file.
+- **sketch2json** is a sketch plugin that generates json files and images in your Sketch file (where Custom panel supports Sketch after version 43).
 
-**json2unity** then combines these files into Unity UI!
+- **json2unity** then combines these files into Unity UI!
 
 
 ## sketch2json
