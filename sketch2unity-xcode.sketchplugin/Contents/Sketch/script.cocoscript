@@ -65,7 +65,7 @@ var onRun = function(context) {
         var groupName = String(group.name());
         var exportPath = panel.URL().path() + "/sketch2unity/" + groupName + "/";
         
-        log("--S2U export: " + groupName + " with path: " + exportPath);
+        console.log("--S2U export: " + groupName + " with path: " + exportPath);
         
         var jsonObj = exportJSON(group, exportPath, customPanel);
         var file = NSString.stringWithString(JSON.stringify(jsonObj, null, "\t"));
@@ -152,8 +152,8 @@ function exportJSON (group, path, customPanel) {
             var mgroup = group.symbolMaster();
             // TODO: deal with override
             /*var override = group.overrides();
-            log ("test override: " + override);
-            log ("of class: " + override.className());*/
+            console.log ("test override: " + override);  // override.affectedLayer
+            console.log ("of class: " + override.className());*/
             var subGroup = mgroup.layers();
         } else {
             var subGroup = group.layers();
@@ -215,23 +215,32 @@ function exportJSON (group, path, customPanel) {
             }
             else {
                 wrongGroups.push(groupName);
-                /*for (var i = 0; i < compGroup.length; i++) {
+                for (var i = 0; i < compGroup.length; i++) {
                     var layer = compGroup[i];
                     var layerName = String(layer.name());
                     
-                    var newGroup = MSLayerGroup.new();
+                    var newGroup = new sketch.Group({
+                                                    name: layerName,
+                                                    layers: layer,
+                                                    parent: group
+                                                    });
+                    
+                    /*var newGroup = MSLayerGroup.new();
                     newGroup.setName(layerName);
                     newGroup.addLayers([layer]);
                     newGroup.resizeToFitChildrenWithOption(0);
                     
-                    //group.layers().push(newGroup);
-                    //group.addLayers([newGroup]);
-                    group.addLayer_(newGroup);
+                    group.addLayers([newGroup]);
                     group.removeLayer(layer);
-                    group.resizeToFitChildrenWithOption(0);
+                    group.resizeToFitChildrenWithOption(0);*/
+                    
+                    //subGroup.push(newGroup);
+                    //var pos = subGroup.indexOf(layer);
+                    //subGroup.splice(pos, 1);
+                    //subGroup.resizeToFitChildrenWithOption(0);
                     
                     childGroup.push(newGroup);
-                }*/
+                }
                 compGroup = [];
             }
         }
@@ -257,7 +266,7 @@ function exportJSON (group, path, customPanel) {
         return jsonObj;
     }
     catch (error) {
-        log("--S2U catch error in exportJSON: " + error);
+        console.log("--S2U catch error in exportJSON: " + error);
         return {};
     }
 }
@@ -326,7 +335,7 @@ function exportComponents (subGroup, path, customPanel) {
         }
     }
     catch (error) {
-        log("--S2U catch error in exportComponents: " + error);
+        console.log("--S2U catch error in exportComponents: " + error);
         return [];
     }
     return compArray;
@@ -342,7 +351,7 @@ function exportImage (layer, path) {
         imageName.push(layerName);
     }
     catch (error) {
-        log("--S2U catch error in exportImage: " + error);
+        console.log("--S2U catch error in exportImage: " + error);
     }
 }
 
@@ -376,7 +385,7 @@ function getShapeColor (layer, layerClass) {
         return fill.color().immutableModelObject().hexValue();
     }
     catch (error) {
-        log("--S2U catch error in getShapeColor: " + error);
+        console.log("--S2U catch error in getShapeColor: " + error);
         return "FFFFFF";
     }
 }
