@@ -13,13 +13,6 @@
                   "shortcut" : "ctrl shift x",
                   },
                   {
-                  "name" : "preview",
-                  "identifier" : "preview",
-                  "script" : "preview.js",
-                  "handler" : "onRun",
-                  "shortcut" : "ctrl shift v",
-                  },
-                  {
                   "script" : "script.cocoscript",
                   "handlers" : {
                     "actions" : {
@@ -40,7 +33,6 @@
         "title" : "sketch2unity-xcode",
         "items" : [
                    "export",
-                   "preview", 
                    ]
     }
 }

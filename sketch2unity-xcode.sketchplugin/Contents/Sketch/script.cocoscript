@@ -52,54 +52,47 @@ var onRun = function(context) {
         [NSApp displayDialog:@"Please select the Artboard Group to export." withTitle:@"Single Layer Selected"];
         return;
     }
-    var panel = NSOpenPanel.openPanel();
-    panel.setCanChooseFiles(false);
-    panel.setCanChooseDirectories(true);
-    panel.setAllowsMultipleSelection(false);
-    panel.setCanCreateDirectories(true);
-    panel.setMessage("Choose a directory to place your output files");
     
-    var clicked = panel.runModal();
-    if (clicked == NSFileHandlingPanelOKButton) {
-        var group = select[0];
-        var groupName = String(group.name());
-        var exportPath = panel.URL().path() + "/sketch2unity/" + groupName + "/";
-        
-        console.log("--S2U export: " + groupName + " with path: " + exportPath);
-        
-        var jsonObj = exportJSON(group, exportPath, customPanel);
-        var file = NSString.stringWithString(JSON.stringify(jsonObj, null, "\t"));
-        [file writeToFile:exportPath + groupName + ".json" atomically:true encoding:NSUTF8StringEncoding error:null];
-        
-        var alertMessage = groupName + ".json and images are saved to: " + exportPath + "\n";
-        if (repeatImages.length > 0) {
-            alertMessage = alertMessage + "\nwith the following images repeat: \n";
-            for (var i = 0; i < repeatImages.length; i++) {
-                alertMessage = alertMessage + (i+1) + ". " + repeatImages[i] + "\n";
-            }
+    var group = select[0];
+    var groupName = String(group.name());
+    var exportPath = COScript.currentCOScript().env().scriptURL.path().stringByDeletingLastPathComponent() + "/FDPreview/sketch2unity/" + groupName + "/";
+    
+    console.log("--S2U export: " + groupName + " with path: " + exportPath);
+    
+    var jsonObj = exportJSON(group, exportPath, customPanel);
+    var file = NSString.stringWithString(JSON.stringify(jsonObj, null, "\t"));
+    [file writeToFile:exportPath + groupName + ".json" atomically:true encoding:NSUTF8StringEncoding error:null];
+    
+    var alertMessage = groupName + ".json and images are saved to: " + exportPath + "\n";
+    if (repeatImages.length > 0) {
+        alertMessage = alertMessage + "\nwith the following images repeat: \n";
+        for (var i = 0; i < repeatImages.length; i++) {
+            alertMessage = alertMessage + (i+1) + ". " + repeatImages[i] + "\n";
         }
-        if (wrongGroups.length > 0) {
-            alertMessage = alertMessage + "\nwith more than one components in the groups: \n";
-            for (var i = 0; i < wrongGroups.length; i++) {
-                alertMessage = alertMessage + (i+1) + ". " + wrongGroups[i] + "\n";
-            }
-            alertMessage = alertMessage + "We have grouped the components for you. Please check them out.\n";
+    }
+    if (wrongGroups.length > 0) {
+        alertMessage = alertMessage + "\nwith more than one components in the groups: \n";
+        for (var i = 0; i < wrongGroups.length; i++) {
+            alertMessage = alertMessage + (i+1) + ". " + wrongGroups[i] + "\n";
         }
-        alertMessage = alertMessage + "\nLoad them in FDPreview by: " + "./sketch2unity/" + groupName + "/" + groupName + ".json\n";
-        [NSApp displayDialog:alertMessage withTitle:@"Document Exported!"];
-        
-        imageName.length = 0;
-        repeatImages.length = 0;
-        wrongGroups.length = 0;
-        
-        this.createWindow();
-        this.createWebView();
-        [NSApp run];
-        
+        alertMessage = alertMessage + "We have grouped the components for you. Please check them out.\n";
     }
-    else {
-        return;
-    }
+    var copyString = "./sketch2unity/" + groupName + "/" + groupName + ".json";
+    var pasteboard = NSPasteboard.generalPasteboard();
+    pasteboard.clearContents();
+    pasteboard.writeObjects([copyString]);
+    alertMessage = alertMessage + "\nYou can load them in preview by copied path now!";
+    [NSApp displayDialog:alertMessage withTitle:@"Document Exported!"];
+
+    imageName.length = 0;
+    repeatImages.length = 0;
+    wrongGroups.length = 0;
+    
+    // TODO: put this.window in upper level to avoid multiple windows and multiple load
+    this.createWindow();
+    this.createWebView(groupName);
+    [NSApp run];
+    
 }
 
 var onSelectionChanged = function(context) {
@@ -121,10 +114,9 @@ function createWindow () {
     return this;
 }
 
-function createWebView () {
+function createWebView (name) {
     var webviewFrame = NSMakeRect(0, 0, 1024, 768);
     
-    // Request index.html
     var webviewFolder   = COScript.currentCOScript().env().scriptURL.path().stringByDeletingLastPathComponent()  + "/FDPreview/";
     var webviewHtmlFile = webviewFolder + "index.html";
     var requestUrl      = [NSURL fileURLWithPath:webviewHtmlFile];
@@ -134,6 +126,7 @@ function createWebView () {
     this.webView.initWithFrame(webviewFrame);
     this.webView.mainFrame().loadRequest(urlRequest);
     this.window.contentView().addSubview(this.webView);
+    this.window.setTitle(name);
     
     return this;
 };
@@ -215,30 +208,24 @@ function exportJSON (group, path, customPanel) {
             }
             else {
                 wrongGroups.push(groupName);
+                
                 for (var i = 0; i < compGroup.length; i++) {
                     var layer = compGroup[i];
                     var layerName = String(layer.name());
                     
-                    var newGroup = new sketch.Group({
-                                                    name: layerName,
-                                                    layers: layer,
-                                                    parent: group
-                                                    });
-                    
-                    /*var newGroup = MSLayerGroup.new();
+                    var newGroup = MSLayerGroup.new();
                     newGroup.setName(layerName);
                     newGroup.addLayers([layer]);
                     newGroup.resizeToFitChildrenWithOption(0);
                     
-                    group.addLayers([newGroup]);
-                    group.removeLayer(layer);
-                    group.resizeToFitChildrenWithOption(0);*/
-                    
-                    //subGroup.push(newGroup);
-                    //var pos = subGroup.indexOf(layer);
-                    //subGroup.splice(pos, 1);
-                    //subGroup.resizeToFitChildrenWithOption(0);
-                    
+                    if (groupClass == "MSSymbolInstance") {
+                        mgroup.addLayers([newGroup]);
+                        mgroup.removeLayer(layer);
+                    }
+                    else {
+                        group.addLayers([newGroup]);
+                        group.removeLayer(layer);
+                    }
                     childGroup.push(newGroup);
                 }
                 compGroup = [];
@@ -275,14 +262,18 @@ function exportChildren (subGroup, path, customPanel) {
     if (subGroup.length == 0) return [];
     
     var childArray = [];
-    for (var i = 0; i < subGroup.length; i++) {
-        var layer = subGroup[i];
-        var layerName = String(layer.name());
-        
-        var groupInfor = exportJSON(layer, path, customPanel);
-        childArray.push(groupInfor);
+    try {
+        for (var i = 0; i < subGroup.length; i++) {
+            var layer = subGroup[i];
+            var groupInfor = exportJSON(layer, path, customPanel);
+            childArray.push(groupInfor);
+        }
+        return childArray;
     }
-    return childArray;
+    catch (error) {
+        console.log("--S2U catch error in exportChildren: " + error);
+        return [];
+    }
 }
 
 function exportComponents (subGroup, path, customPanel) {
@@ -333,12 +324,12 @@ function exportComponents (subGroup, path, customPanel) {
                            });
             exportImage(layer, path);
         }
+        return compArray;
     }
     catch (error) {
         console.log("--S2U catch error in exportComponents: " + error);
         return [];
     }
-    return compArray;
 }
 
 
