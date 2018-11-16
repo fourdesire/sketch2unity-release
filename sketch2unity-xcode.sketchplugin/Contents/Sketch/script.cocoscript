@@ -218,14 +218,14 @@ function exportJSON (group, path, customPanel) {
                     newGroup.addLayers([layer]);
                     newGroup.resizeToFitChildrenWithOption(0);
                     
-                    if (groupClass == "MSSymbolInstance") {
+                    /*if (groupClass == "MSSymbolInstance") {
                         mgroup.addLayers([newGroup]);
                         mgroup.removeLayer(layer);
                     }
-                    else {
+                    else {*/
                         group.addLayers([newGroup]);
                         group.removeLayer(layer);
-                    }
+                    //}
                     childGroup.push(newGroup);
                 }
                 compGroup = [];
@@ -253,7 +253,7 @@ function exportJSON (group, path, customPanel) {
         return jsonObj;
     }
     catch (error) {
-        console.log("--S2U catch error in exportJSON: " + error);
+        catchErrorAlert("exportJSON()", error);
         return {};
     }
 }
@@ -271,7 +271,7 @@ function exportChildren (subGroup, path, customPanel) {
         return childArray;
     }
     catch (error) {
-        console.log("--S2U catch error in exportChildren: " + error);
+        catchErrorAlert("exportChildren()", error);
         return [];
     }
 }
@@ -327,11 +327,15 @@ function exportComponents (subGroup, path, customPanel) {
         return compArray;
     }
     catch (error) {
-        console.log("--S2U catch error in exportComponents: " + error);
+        catchErrorAlert("exportComponents()", error);
         return [];
     }
 }
 
+function catchErrorAlert (where, error) {
+    console.log("--S2U catch error in " + where + ": " + error);
+    [NSApp displayDialog:error withTitle:@"Error Catched!"];
+}
 
 function exportImage (layer, path) {
     var layerName = String(layer.name());
