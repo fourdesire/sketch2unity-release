@@ -89,9 +89,7 @@ var onRun = function(context) {
     repeatImages.length = 0;
     wrongGroups.length = 0;
     
-    // TODO: Solve multiple windows and multiple load
-    this.createWindow();
-    this.createWebView(groupName);
+    this.createWindow(groupName);
     [NSApp run];
     
 }
@@ -101,17 +99,29 @@ var onSelectionChanged = function(context) {
 };
 
 
-function createWindow () {
+function createWindow (name) {
+    var threadDictionary = NSThread.mainThread().threadDictionary();
+    var identifier = "Sketch2unityPreview";
+    //log ("test threadDictionary: " + threadDictionary);
+    
+    if (threadDictionary[identifier]) {
+        this.window = threadDictionary[identifier];
+        this.window.makeKeyAndOrderFront_(this.window);
+        this.window.setTitle(name);
+        return this;
+    }
+    
     this.window = [[[NSWindow alloc]
                     initWithContentRect:NSMakeRect(0, 0, 1024, 768)
                     styleMask:NSTitledWindowMask | NSClosableWindowMask | NSMiniaturizableWindowMask
                     backing:NSBackingStoreBuffered
                     defer:false
                     ] autorelease];
-    
     this.window.center();
     this.window.makeKeyAndOrderFront_(this.window);
+    this.createWebView(name);
     
+    threadDictionary[identifier] = this.window;
     return this;
 }
 
@@ -300,7 +310,7 @@ function exportComponents (subGroup, path, customPanel) {
                            });
             exportImage(layer, path);
         }
-        else if (layerClass == "MSShapeGroup" || layerClass == "MSShapePathLayer" || layerClass == "MSRectangleShape" || layerClass == "MSOvalShape" || layerClass == "MSTriangleShape" || layerClass == "MSPolygonShap" || layerClass == "MSStarShape") {
+        else if (layerClass == "MSShapeGroup" || layerClass == "MSShapePathLayer" || layerClass == "MSRectangleShape" || layerClass == "MSOvalShape" || layerClass == "MSTriangleShape" || layerClass == "MSPolygonShape" || layerClass == "MSStarShape") {
             var layerColor = String(getShapeColor(layer, layerClass));
             if (layerColor == "undefined") layerColor = "#FFFFFF";
             else layerColor = "#" + layerColor;
@@ -359,14 +369,18 @@ function getTextAlignString (hAlign, vAlign) {
         return alignment = "Upper" + hAlign2String(hAlign);
     else if (vAlign == 1)
         return alignment = "Middle" + hAlign2String(hAlign);
-    else
+    else if (vAlign == 2)
         return alignment = "Lower" + hAlign2String(hAlign);
+    else
+        return alignment = "Upper" + hAlign2String(hAlign);
 }
 
 function hAlign2String (hAlign) {
+    if (hAlign == 0 || hAlign == 3)
+        return "Left";
     if (hAlign == 1)
         return "Right";
-    else if (hAlign == 2 || hAlign == 3)
+    else if (hAlign == 2)
         return "Center";
     else
         return "Left";
