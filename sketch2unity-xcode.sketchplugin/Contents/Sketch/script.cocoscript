@@ -16,6 +16,7 @@ var onRun = function(context) {
     var customPanel = mocha.valueForKey("Sketch2unity");
     if (customPanel == null || customPanel === undefined) {
         customPanelDisabled = true;
+        catchErrorAlert ("onRun()", "customPanel is null or undefined");
     }
   
     if (doc.isDraft()) {
@@ -88,7 +89,7 @@ var onRun = function(context) {
     repeatImages.length = 0;
     wrongGroups.length = 0;
     
-    // TODO: put this.window in upper level to avoid multiple windows and multiple load
+    // TODO: Solve multiple windows and multiple load
     this.createWindow();
     this.createWebView(groupName);
     [NSApp run];
@@ -141,40 +142,31 @@ function exportJSON (group, path, customPanel) {
     try {
         if (groupRotation != 0) group.setRotation(0);
         
+        var igroup = group;
         if (groupClass == "MSSymbolInstance") {
-            var mgroup = group.symbolMaster();
-            // TODO: deal with override
-            /*var override = group.overrides();
-            console.log ("test override: " + override);  // override.affectedLayer
-            console.log ("of class: " + override.className());*/
-            var subGroup = mgroup.layers();
-        } else {
-            var subGroup = group.layers();
+            igroup = group.symbolMaster();
         }
+        var subGroup = igroup.layers();
+        
+        // TODO: Override
+        /*var override = group.overrides();
+         console.log ("test override: " + override);  // override.affectedLayer
+         console.log ("of class: " + override.className());*/
 
         var layerFrame = group.absoluteRect();
         var parentFrame = group.parentGroup().absoluteRect();
-        var layerXpos = layerFrame.x() + layerFrame.width()/2 - (parentFrame.x() + parentFrame.width()/2);
-        var layerYpos = layerFrame.y() + layerFrame.height()/2 - (parentFrame.y() + parentFrame.height()/2);
         
-        var layerHeight = layerFrame.height();
         var layerWidth = layerFrame.width();
-        if (customPanelDisabled) {
-            var maxAnchorX = 0.5;
-            var maxAnchorY = 0.5;
-            var minAnchorX = 0.5;
-            var minAnchorY = 0.5;
-            var pivotX = 0.5;
-            var pivotY = 0.5;
-        }
-        else {
-            var maxAnchorX = customPanel.getMaxAnchorX(groupID);
-            var maxAnchorY = customPanel.getMaxAnchorY(groupID);
-            var minAnchorX = customPanel.getMinAnchorX(groupID);
-            var minAnchorY = customPanel.getMinAnchorY(groupID);
-            var pivotX = customPanel.getPivotX(groupID);
-            var pivotY = customPanel.getPivotY(groupID);
-        }
+        var layerHeight = layerFrame.height();
+        var layerXpos = layerFrame.x() + layerWidth/2 - (parentFrame.x() + parentFrame.width()/2);
+        var layerYpos = layerFrame.y() + layerHeight/2 - (parentFrame.y() + parentFrame.height()/2);
+        
+        var maxAnchorX = (customPanelDisabled) ? 0.5 : customPanel.getMaxAnchorX(groupID);
+        var maxAnchorY = (customPanelDisabled) ? 0.5 : customPanel.getMaxAnchorY(groupID);
+        var minAnchorX = (customPanelDisabled) ? 0.5 : customPanel.getMinAnchorX(groupID);
+        var minAnchorY = (customPanelDisabled) ? 0.5 : customPanel.getMinAnchorY(groupID);
+        var pivotX = (customPanelDisabled) ? 0.5 : customPanel.getPivotX(groupID);
+        var pivotY = (customPanelDisabled) ? 0.5 : customPanel.getPivotY(groupID);
         
         // get components & children infor
         var compGroup = [], childGroup = [];
@@ -193,10 +185,6 @@ function exportJSON (group, path, customPanel) {
                 sliceLayer = layer;
             }
             else if (layerClass == "MSTextLayer" || layerClass == "MSBitmapLayer" || layerClass == "MSShapeGroup" || layerClass == "MSShapePathLayer" || layerClass == "MSRectangleShape" || layerClass == "MSOvalShape" || layerClass == "MSTriangleShape" || layerClass == "MSPolygonShap" || layerClass == "MSStarShape") {
-                if (layer.hasClippingMask() == 1) {
-                    layer.setIsVisible(false);
-                    continue;
-                }
                 compGroup.push(layer);
             }
         }
@@ -209,26 +197,26 @@ function exportJSON (group, path, customPanel) {
             else {
                 wrongGroups.push(groupName);
                 
+                var maskLayer = null;
                 for (var i = 0; i < compGroup.length; i++) {
                     var layer = compGroup[i];
                     var layerName = String(layer.name());
-                    
+                    if (layer.hasClippingMask() == 1) {  // handle mask
+                        maskLayer = layer;
+                        continue;
+                    }
                     var newGroup = MSLayerGroup.new();
                     newGroup.setName(layerName);
                     newGroup.addLayers([layer]);
                     newGroup.resizeToFitChildrenWithOption(0);
                     
-                    /*if (groupClass == "MSSymbolInstance") {
-                        mgroup.addLayers([newGroup]);
-                        mgroup.removeLayer(layer);
-                    }
-                    else {*/
-                        group.addLayers([newGroup]);
-                        group.removeLayer(layer);
-                    //}
+                    igroup.addLayers([newGroup]);
+                    igroup.removeLayer(layer);
+                    
                     childGroup.push(newGroup);
                 }
-                compGroup = [];
+                igroup.resizeToFitChildrenWithOption(0);
+                compGroup = (maskLayer != null) ? [maskLayer] : [];
             }
         }
         var groupComponents = exportComponents(compGroup, path, customPanel);
@@ -291,7 +279,7 @@ function exportComponents (subGroup, path, customPanel) {
             var layerColor = "#" + String(layer.textColor().immutableModelObject().hexValue());
             var font = String(layer.font().fontName());  // String(layer.fontPostscriptName());
             var fontSize = layer.fontSize();
-            var textAlign = textAlign2String(layer.textAlignment());
+            var textAlign = getTextAlignString(layer.textAlignment(), layer.style().textStyle().verticalAlignment());
             var autoFit = (customPanelDisabled) ? -1 : customPanel.getTextAuto(layerID);
             
             compArray.push({
@@ -346,7 +334,7 @@ function exportImage (layer, path) {
         imageName.push(layerName);
     }
     catch (error) {
-        console.log("--S2U catch error in exportImage: " + error);
+        catchErrorAlert("exportImage()", error);
     }
 }
 
@@ -366,10 +354,22 @@ function isRepeat (name) {
     } return false;
 }
 
-function textAlign2String (align) {
-    if (align == 0) return "left";
-    else if (align == 1) return "right";
-    else return "center";
+function getTextAlignString (hAlign, vAlign) {
+    if (vAlign == 0)
+        return alignment = "Upper" + hAlign2String(hAlign);
+    else if (vAlign == 1)
+        return alignment = "Middle" + hAlign2String(hAlign);
+    else
+        return alignment = "Lower" + hAlign2String(hAlign);
+}
+
+function hAlign2String (hAlign) {
+    if (hAlign == 1)
+        return "Right";
+    else if (hAlign == 2 || hAlign == 3)
+        return "Center";
+    else
+        return "Left";
 }
 
 function getShapeColor (layer, layerClass) {
@@ -380,7 +380,7 @@ function getShapeColor (layer, layerClass) {
         return fill.color().immutableModelObject().hexValue();
     }
     catch (error) {
-        console.log("--S2U catch error in getShapeColor: " + error);
+        catchErrorAlert("getShapeColor()", error);
         return "FFFFFF";
     }
 }
