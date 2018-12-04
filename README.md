@@ -11,9 +11,9 @@ This module consists of two parts: **sketch2json** and **json2unity**.
 
 ### Usage
 [For Designers]
-1. Download 'sketch2unity-xcode.sketchplugin' from releases
-2. Double click 'sketch2unity-xcode.sketchplugin' to install the plugin or 
-Move the package 'sketch2unity-xcode.sketchplugin' to the folder `~/Library/Application Support/com.bohemiancoding.sketch3/Plugins/`
+1. Download **sketch2unity-xcode.sketchplugin** from releases
+2. Double click **sketch2unity-xcode.sketchplugin** to install the plugin or 
+Move the package **sketch2unity-xcode.sketchplugin** to the folder `~/Library/Application Support/com.bohemiancoding.sketch3/Plugins/`
 3. Set layout values for the group and symbol in custom panel in inspector
 4. Arrange layers accordong to the Sketch Convention below
 5. Select the artboard or the group you want to export
@@ -37,8 +37,8 @@ Move the package 'sketch2unity-xcode.sketchplugin' to the folder `~/Library/Appl
 
 ### Usage
 [For Engineers]
-1. Download `editor` folder containing FDSketch2Unity.cs, FDUIGeneratorBase.cs, FDUIGeneratorEditor.cs
-2. Add `editor` to your Unity project and Compile
+1. Download **Editor folder** containing FDSketch2Unity.cs, FDUIGeneratorBase.cs, FDUIGeneratorEditor.cs and FDJsonHelper
+2. Add **Editor** to your Unity project and Compile
 3. Import exported json files and images folder to Assets folder in Unity
 4. If necessary, put fonts(.ttf, .otf) used in UI in a folder named Resources, and move the folder to **Assets folder**
 5. Right click on the exported json files and Choose `Create > Sketch2Unity > Import` to generate UI.
