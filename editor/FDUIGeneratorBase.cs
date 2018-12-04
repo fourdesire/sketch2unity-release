@@ -96,15 +96,16 @@ namespace FD.Sketch2Unity {
 					if (AutoFit > 0) {
 						text.resizeTextForBestFit = true;
 						text.resizeTextMinSize = AutoFit;
+						text.resizeTextMaxSize = fontSize;
 					}
 					text.alignment = alignString2anchor (align);
 					text.color = colorString2rgba (color);
-					text.verticalOverflow = VerticalWrapMode.Overflow;
+					text.verticalOverflow = VerticalWrapMode.Truncate;
 				} 
 
 				else if (objType == "image") {
 					string name = obj.StringValue ("image");
-					//string color = obj.StringValue ("color");
+					string color = obj.StringValue ("color");
 					string imagePath = m_Path + "images/" + name + ".png";
 
 					Image image = root.AddComponent<Image> ();
