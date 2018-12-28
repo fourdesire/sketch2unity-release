@@ -1,24 +1,33 @@
-@import 'sketch2unity.framework/sketch2unity.js'
-
+@import 'sketch2unity.framework/sketch2unity.js';
 const sketch = require('sketch/dom');
 const contentType = "sketch2unity";
 const version = "1.0.0";
+
 var imageName = [];
 var repeatImages = [];
 var wrongGroups = [];
+var errorMessages = [];
 var customPanelDisabled = false;
 
-var onRun = function(context) {
+
+/**
+ * Start the script and run every time the plugin shortcut or menu item is fired
+ * Export json file & images of selected UI
+ *
+ * @param {object} context: provided by Sketch with information of currently running app
+ *
+ */
+var onRun = function (context) {
     const doc = context.document;
     const select = context.selection;
 
     var mocha = Mocha.sharedRuntime();
-    var customPanel = mocha.valueForKey("Sketch2unity");
+    var customPanel = mocha.valueForKey("Sketch2Unity");
     if (customPanel == null || customPanel === undefined) {
         customPanelDisabled = true;
-        catchErrorAlert ("onRun()", "customPanel is null or undefined");
+        errorMessages.push("--S2U catch error in onRun(): customPanel is null or undefined");
     }
-  
+
     if (doc.isDraft()) {
         [NSApp displayDialog:@"Please save the document to export." withTitle:@"Document Not Saved"];
         return;
@@ -49,49 +58,36 @@ var onRun = function(context) {
         [NSApp displayDialog:@"Please select only one Artboard Group to export." withTitle:@"Multiple Groups Selected"];
         return;
     }
-    if (select[0].className() != "MSArtboardGroup" && select[0].className() != "MSLayerGroup") {
+    
+    var group = select[0];
+    var groupClass = String(group.className());
+    if (groupClass != "MSArtboardGroup" && groupClass != "MSLayerGroup") {
         [NSApp displayDialog:@"Please select the Artboard Group to export." withTitle:@"Single Layer Selected"];
         return;
     }
     
-    var group = select[0];
     var groupName = String(group.name());
-    var exportPath = COScript.currentCOScript().env().scriptURL.path().stringByDeletingLastPathComponent() + "/FDPreview/sketch2unity/" + groupName + "/";
-    
+    var d = new Date();
+    var timestamp = "-" + d.getFullYear() + "-" + Number(d.getMonth()+1) + "-" + d.getDate() + "-" + d.getHours() + "." + d.getMinutes() + "." + d.getSeconds();
+    var exportPath = COScript.currentCOScript().env().scriptURL.path().stringByDeletingLastPathComponent() + "/FDPreview/sketch2unity/" + groupName + timestamp + "/";
+    var relativePath = "./sketch2unity/" + groupName + timestamp + "/" + groupName + ".json";
     console.log("--S2U export: " + groupName + " with path: " + exportPath);
     
     var jsonObj = exportJSON(group, exportPath, customPanel);
     var file = NSString.stringWithString(JSON.stringify(jsonObj, null, "\t"));
     [file writeToFile:exportPath + groupName + ".json" atomically:true encoding:NSUTF8StringEncoding error:null];
     
-    var alertMessage = groupName + ".json and images are saved to: " + exportPath + "\n";
-    if (repeatImages.length > 0) {
-        alertMessage = alertMessage + "\nwith the following images repeat: \n";
-        for (var i = 0; i < repeatImages.length; i++) {
-            alertMessage = alertMessage + (i+1) + ". " + repeatImages[i] + "\n";
-        }
-    }
-    if (wrongGroups.length > 0) {
-        alertMessage = alertMessage + "\nwith more than one components in the groups: \n";
-        for (var i = 0; i < wrongGroups.length; i++) {
-            alertMessage = alertMessage + (i+1) + ". " + wrongGroups[i] + "\n";
-        }
-        alertMessage = alertMessage + "We have grouped the components for you. Please check them out.\n";
-    }
-    var copyString = "./sketch2unity/" + groupName + "/" + groupName + ".json";
-    var pasteboard = NSPasteboard.generalPasteboard();
-    pasteboard.clearContents();
-    pasteboard.writeObjects([copyString]);
-    alertMessage = alertMessage + "\nYou can load them in preview by copied path now!";
-    [NSApp displayDialog:alertMessage withTitle:@"Document Exported!"];
-
+    var exportMessage = getExportMessage(groupName, relativePath, exportPath);
+    [NSApp displayDialog:exportMessage withTitle:@"Document Exported!"];
+    if (errorMessages.length > 0) catchErrorAlert();
+    
     imageName.length = 0;
     repeatImages.length = 0;
     wrongGroups.length = 0;
+    errorMessages.length = 0;
     
-    this.createWindow(groupName);
+    this.loadWindow(relativePath);
     [NSApp run];
-    
 }
 
 var onSelectionChanged = function(context) {
@@ -99,50 +95,15 @@ var onSelectionChanged = function(context) {
 };
 
 
-function createWindow (name) {
-    var threadDictionary = NSThread.mainThread().threadDictionary();
-    var identifier = "Sketch2unityPreview";
-    //log ("test threadDictionary: " + threadDictionary);
-    
-    if (threadDictionary[identifier]) {
-        this.window = threadDictionary[identifier];
-        this.window.makeKeyAndOrderFront_(this.window);
-        this.window.setTitle(name);
-        return this;
-    }
-    
-    this.window = [[[NSWindow alloc]
-                    initWithContentRect:NSMakeRect(0, 0, 1024, 768)
-                    styleMask:NSTitledWindowMask | NSClosableWindowMask | NSMiniaturizableWindowMask
-                    backing:NSBackingStoreBuffered
-                    defer:false
-                    ] autorelease];
-    this.window.center();
-    this.window.makeKeyAndOrderFront_(this.window);
-    this.createWebView(name);
-    
-    threadDictionary[identifier] = this.window;
-    return this;
-}
 
-function createWebView (name) {
-    var webviewFrame = NSMakeRect(0, 0, 1024, 768);
-    
-    var webviewFolder   = COScript.currentCOScript().env().scriptURL.path().stringByDeletingLastPathComponent()  + "/FDPreview/";
-    var webviewHtmlFile = webviewFolder + "index.html";
-    var requestUrl      = [NSURL fileURLWithPath:webviewHtmlFile];
-    var urlRequest      = [NSMutableURLRequest requestWithURL:requestUrl];
-    
-    this.webView = WebView.new();
-    this.webView.initWithFrame(webviewFrame);
-    this.webView.mainFrame().loadRequest(urlRequest);
-    this.window.contentView().addSubview(this.webView);
-    this.window.setTitle(name);
-    
-    return this;
-};
-
- 
+/**
+ * Create json object for group, get its components & children infor, and handle creating groups automatically
+ *
+ * @param {MSLayerGroup or MSSymbolInstance} group
+ * @param {String} path: UI export path
+ * @param {MochaRuntime} customPanel: shared runtime custom panel
+ * @returns {jsonObj}
+ */
 function exportJSON (group, path, customPanel) {
     var groupName = String(group.name());
     var groupID = String(group.objectID());
@@ -150,6 +111,10 @@ function exportJSON (group, path, customPanel) {
     var groupRotation = group.rotation();
     
     try {
+        var name = groupName;
+        while (name.includes("/")) {
+            name = name.replace("/", "-");
+        }
         if (groupRotation != 0) group.setRotation(0);
         
         var igroup = group;
@@ -157,20 +122,13 @@ function exportJSON (group, path, customPanel) {
             igroup = group.symbolMaster();
         }
         var subGroup = igroup.layers();
-        
-        // TODO: Override
-        /*var override = group.overrides();
-         console.log ("test override: " + override);  // override.affectedLayer
-         console.log ("of class: " + override.className());*/
 
-        var layerFrame = group.absoluteRect();
+        var groupFrame = group.absoluteRect();
         var parentFrame = group.parentGroup().absoluteRect();
-        
-        var layerWidth = layerFrame.width();
-        var layerHeight = layerFrame.height();
-        var layerXpos = layerFrame.x() + layerWidth/2 - (parentFrame.x() + parentFrame.width()/2);
-        var layerYpos = layerFrame.y() + layerHeight/2 - (parentFrame.y() + parentFrame.height()/2);
-        
+        var groupWidth = groupFrame.width();
+        var groupHeight = groupFrame.height();
+        var groupXpos = groupFrame.x() + groupWidth/2 - (parentFrame.x() + parentFrame.width()/2);
+        var groupYpos = groupFrame.y() + groupHeight/2 - (parentFrame.y() + parentFrame.height()/2);
         var maxAnchorX = (customPanelDisabled) ? 0.5 : customPanel.getMaxAnchorX(groupID);
         var maxAnchorY = (customPanelDisabled) ? 0.5 : customPanel.getMaxAnchorY(groupID);
         var minAnchorX = (customPanelDisabled) ? 0.5 : customPanel.getMinAnchorX(groupID);
@@ -180,67 +138,95 @@ function exportJSON (group, path, customPanel) {
         
         // get components & children infor
         var compGroup = [], childGroup = [];
-        var sliceLayer = null;
-       
+        var sliceLayer = null, maskLayer = null;
+        
         for (var i = 0; i < subGroup.length; i++) {
             var layer = subGroup[i];
             if (!layer.isVisible()) continue;
             
+            var layerName = String(layer.name());
             var layerClass = String(layer.className());
+
             if (layerClass == "MSLayerGroup" || layerClass == "MSSymbolInstance") {
                 childGroup.push(layer);
+            }
+            else if (layerClass == "MSTextLayer" || layerClass == "MSBitmapLayer") {
+                compGroup.push(layer);
             }
             else if (layerClass == "MSSliceLayer") {
                 compGroup.push(layer);
                 sliceLayer = layer;
             }
-            else if (layerClass == "MSTextLayer" || layerClass == "MSBitmapLayer" || layerClass == "MSShapeGroup" || layerClass == "MSShapePathLayer" || layerClass == "MSRectangleShape" || layerClass == "MSOvalShape" || layerClass == "MSTriangleShape" || layerClass == "MSPolygonShap" || layerClass == "MSStarShape") {
+            else if (layerClass == "MSShapeGroup" || layerClass == "MSShapePathLayer" || layerClass == "MSRectangleShape" || layerClass == "MSOvalShape" || layerClass == "MSTriangleShape" || layerClass == "MSPolygonShape" || layerClass == "MSStarShape") {
                 compGroup.push(layer);
+                if (layer.hasClippingMask() == 1) {
+                    maskLayer = layer;
+                }
             }
         }
-      
-        if (compGroup.length > 1) {  // handle multiple components
+        
+        // handle create folders
+        if (compGroup.length == 1 && childGroup.length != 0) {  //case1: create a folder
+            var layer = compGroup[0];
+            var layerFrame = layer.absoluteRect();
             
-            if (sliceLayer != null) {
+            if (!equalFrames(layerFrame, groupFrame) && maskLayer == null) {
+                wrongGroups.push(groupName);
+                childGroup = wrapLayer (layer, igroup, childGroup);
+                compGroup.length = 0;
+            }
+        }
+        else if (compGroup.length > 1) {
+            
+            if (sliceLayer != null) {  // case2: with slice
                 compGroup = [sliceLayer];
             }
-            else {
+            else if (maskLayer != null) {  // case3: create folders with mask
                 wrongGroups.push(groupName);
-                
-                var maskLayer = null;
                 for (var i = 0; i < compGroup.length; i++) {
                     var layer = compGroup[i];
-                    var layerName = String(layer.name());
-                    if (layer.hasClippingMask() == 1) {  // handle mask
-                        maskLayer = layer;
-                        continue;
-                    }
-                    var newGroup = MSLayerGroup.new();
-                    newGroup.setName(layerName);
-                    newGroup.addLayers([layer]);
-                    newGroup.resizeToFitChildrenWithOption(0);
+                    if (layer == maskLayer) continue;
                     
-                    igroup.addLayers([newGroup]);
-                    igroup.removeLayer(layer);
-                    
-                    childGroup.push(newGroup);
+                    childGroup = wrapLayer (layer, igroup, childGroup);
                 }
                 igroup.resizeToFitChildrenWithOption(0);
-                compGroup = (maskLayer != null) ? [maskLayer] : [];
+                compGroup = [maskLayer];
+            }
+            else {  // case4: create folders without mask
+                wrongGroups.push(groupName);
+                var compLayer = null;
+                for (var i = 0; i < compGroup.length; i++) {
+                    var layer = compGroup[i];
+                    var layerFrame = layer.absoluteRect();
+                    
+                    if (equalFrames(layerFrame, groupFrame) && compLayer == null) {
+                        compLayer = layer;
+                        continue;
+                    }
+                    childGroup = wrapLayer (layer, igroup, childGroup);
+                }
+                igroup.resizeToFitChildrenWithOption(0);
+                if (compLayer == null) {
+                    compGroup.length = 0;
+                }
+                else {
+                    compGroup = [compLayer];
+                }
             }
         }
+        
         var groupComponents = exportComponents(compGroup, path, customPanel);
         var groupChildren = exportChildren(childGroup, path, customPanel);
         
         var jsonObj = {
             content_type: contentType,
             version: version,
-            name: groupName,
+            name: name,
             layout: {
                 "max_anchor": {"x": maxAnchorX, "y": maxAnchorY},
                 "min_anchor": {"x": minAnchorX, "y": minAnchorY},
                 "pivot": {"x": pivotX, "y": pivotY},
-                "values": [layerXpos, layerYpos, layerWidth, layerHeight],
+                "values": [groupXpos, groupYpos, groupWidth, groupHeight],
                 "rotation_z": groupRotation
             },
             components: groupComponents,
@@ -251,11 +237,19 @@ function exportJSON (group, path, customPanel) {
         return jsonObj;
     }
     catch (error) {
-        catchErrorAlert("exportJSON()", error);
+        errorMessages.push("--S2U catch error in exportJSON(): " + error);
         return {};
     }
 }
 
+/**
+ * Create children array of groups in subGroup
+ *
+ * @param {Array.MSLayerGroup or MSSymbolInstance} subGroup
+ * @param {String} path
+ * @param {MochaRuntime} customPanel
+ * @returns {Array.jsonObj} childArray
+ */
 function exportChildren (subGroup, path, customPanel) {
     if (subGroup.length == 0) return [];
     
@@ -269,11 +263,19 @@ function exportChildren (subGroup, path, customPanel) {
         return childArray;
     }
     catch (error) {
-        catchErrorAlert("exportChildren()", error);
+        errorMessages.push("--S2U catch error in exportChildren(): " + error);
         return [];
     }
 }
 
+/**
+ * Create components array of layers in subGroup
+ *
+ * @param {Array.MSTextLayer, MSBitmapLayer, MSSliceLayer, MSShapeGroup, MSShapePathLayer, MSRectangleShape, MSOvalShape, MSTriangleShape, MSPolygonShape or MSStarShape} subGroup
+ * @param {String} path
+ * @param {MochaRuntime} customPanel
+ * @returns {Array.jsonObj} compArray
+ */
 function exportComponents (subGroup, path, customPanel) {
     if (subGroup.length == 0) return [];
     
@@ -283,7 +285,7 @@ function exportComponents (subGroup, path, customPanel) {
         var layerClass = String(layer.className());
         var layerName = String(layer.name());
         var layerID = String(layer.parentGroup().objectID());
-    
+        
         if (layerClass == "MSTextLayer") {
             var layerText = String(layer.stringValue());
             var layerColor = "#" + String(layer.textColor().immutableModelObject().hexValue());
@@ -325,16 +327,96 @@ function exportComponents (subGroup, path, customPanel) {
         return compArray;
     }
     catch (error) {
-        catchErrorAlert("exportComponents()", error);
+        errorMessages.push("--S2U catch error in exportComponents(): " + error);
         return [];
     }
 }
 
-function catchErrorAlert (where, error) {
-    console.log("--S2U catch error in " + where + ": " + error);
-    [NSApp displayDialog:error withTitle:@"Error Catched!"];
+
+/**
+ * Wrap layer with a group
+ *
+ * @param {Array.MSLayer} layer
+ * @param {MSLayerGroup or MSSymbolMaster} parentGroup: parent of layer
+ * @param {Array.MSLayerGroup or MSSymbolInstance} childGroup
+ * @returns {Array.jsonObj}
+ */
+function wrapLayer (layer, parentGroup, childGroup) {
+    var layerName = String(layer.name());
+    var parentIndex = parentGroup.indexOfLayer(layer);
+    var childIndex = getLayerIndexInChild(layer, parentGroup, childGroup);
+    
+    var newGroup = MSLayerGroup.new();
+    newGroup.setName(layerName);
+    newGroup.addLayers([layer]);
+    newGroup.resizeToFitChildrenWithOption(0);
+    newGroup.setShouldBreakMaskChain(layer.shouldBreakMaskChain());
+    
+    parentGroup.addLayers([newGroup]);
+    parentGroup.removeLayer(layer);
+    
+    MSLayerMovement.moveToBack([newGroup]);
+    for (var i = 0; i < parentIndex; i++) {
+        MSLayerMovement.moveForward([newGroup]);
+    }
+    childGroup.splice(childIndex, 0, newGroup);
+    return childGroup;
 }
 
+/**
+ * Get index of layer to be inserted in childGroup
+ *
+ * @param {Array.MSLayer} layer
+ * @param {MSLayerGroup or MSSymbolMaster} parentGroup: parent of layer
+ * @param {Array.MSLayerGroup or MSSymbolInstance} childGroup
+ * @returns {Number}
+ */
+function getLayerIndexInChild (layer, parentGroup, childGroup) {
+    var originalIndex = parentGroup.indexOfLayer(layer);
+    if (originalIndex == 0) return 0;
+
+    var subGroup = parentGroup.layers();
+    var prevLayer = null;
+    var prevIndex = -1;
+    for (var i = 0; i < originalIndex; i++) {
+        var layer = subGroup[i];
+        var index = childGroup.indexOf(layer);
+        if (index >= 0) {
+            prevIndex = index;
+            prevLayer = layer;
+        }
+    }
+    return (prevIndex >= 0) ? prevIndex + 1 : 0;
+}
+
+/**
+ * Compare whether frame1 & frame2 are equal
+ *
+ * @param {MSAbsoluteRect} frame1
+ * @param {MSAbsoluteRect} frame2
+ * @returns {Boolean}
+ */
+function equalFrames (frame1, frame2) {
+    var frame1Width = frame1.width();
+    var frame1Height = frame1.height();
+    var frame1Xpos = frame1.x();
+    var frame1Ypos = frame1.y();
+    
+    var frame2Width = frame2.width();
+    var frame2Height = frame2.height();
+    var frame2Xpos = frame2.x();
+    var frame2Ypos = frame2.y();
+    
+    if (frame1Width == frame2Width && frame1Height == frame2Height && frame1Xpos == frame2Xpos && frame1Ypos == frame2Ypos) return true;
+    return false;
+}
+
+/**
+ * Export image of layer at path
+ *
+ * @param {MSBitmapLayer, MSSliceLayer, MSShapeGroup, MSShapePathLayer, MSRectangleShape, MSOvalShape, MSTriangleShape, MSPolygonShape or MSStarShape} layer
+ * @param {String} path
+ */
 function exportImage (layer, path) {
     var layerName = String(layer.name());
     if (isRepeat(layerName)) return;
@@ -344,10 +426,16 @@ function exportImage (layer, path) {
         imageName.push(layerName);
     }
     catch (error) {
-        catchErrorAlert("exportImage()", error);
+        errorMessages.push("--S2U catch error in exportImage(): " + error);
     }
 }
 
+/**
+ * Check whether image of name has been exported
+ *
+ * @param {String} name
+ * @returns {Boolean}
+ */
 function isRepeat (name) {
     for (var i = 0; i < imageName.length; i++) {
         if (name == imageName[i]) {
@@ -364,6 +452,13 @@ function isRepeat (name) {
     } return false;
 }
 
+/**
+ * Get text vertical & horizontal alignment string
+ *
+ * @param {String} hAlign: horizontal alignment
+ * @param {String} vAlign: vertical alignment
+ * @returns {String}
+ */
 function getTextAlignString (hAlign, vAlign) {
     if (vAlign == 0)
         return alignment = "Upper" + hAlign2String(hAlign);
@@ -375,6 +470,12 @@ function getTextAlignString (hAlign, vAlign) {
         return alignment = "Upper" + hAlign2String(hAlign);
 }
 
+/**
+ * Get text horizontal alignment string
+ *
+ * @param {String} hAlign: horizontal alignment
+ * @returns {String}
+ */
 function hAlign2String (hAlign) {
     if (hAlign == 0 || hAlign == 3)
         return "Left";
@@ -386,16 +487,144 @@ function hAlign2String (hAlign) {
         return "Left";
 }
 
+/**
+ * Get shape color string
+ *
+ * @param {MSShapeGroup, MSShapePathLayer, MSRectangleShape, MSOvalShape, MSTriangleShape, MSPolygonShape or MSStarShape} layer
+ * @param {String} layerClass: class of layer
+ * @returns {String}
+ */
 function getShapeColor (layer, layerClass) {
     try {
         var fillArray = (layerClass == "MSShapePathLayer") ? layer.style().borders() : layer.style().fills();
         if (fillArray.length == 0) return "FFFFFF";
+        
         var fill = fillArray[0];
         return fill.color().immutableModelObject().hexValue();
     }
     catch (error) {
-        catchErrorAlert("getShapeColor()", error);
+        errorMessages.push("--S2U catch error in getShapeColor(): " + error);
         return "FFFFFF";
     }
+}
+
+
+/**
+ * Create window and load UI in window
+ *
+ * @param {String} path: relative export path of exported json file
+ * @returns {NSWindow}
+ */
+function loadWindow (path) {
+    var threadDictionary = NSThread.mainThread().threadDictionary();
+    var identifier = "Sketch2UnityPreview";
+    
+    if (threadDictionary[identifier]) {
+        this.window = threadDictionary[identifier];
+        this.window.makeKeyAndOrderFront_(this.window);
+        this.window.setTitle(path);
+        
+        var windowObject = this.window.contentView().subviews()[0].windowScriptObject();
+        var finishUnityLoad = [windowObject evaluateWebScript:[NSString stringWithFormat:@"finishUnityLoad"]];
+        log ("test1 js: " + finishUnityLoad);
+        log ("test1 cmp 1: " + (finishUnityLoad == "1"));
+        log ("test1 cmp undef: " + (finishUnityLoad == "undefined"));
+        [windowObject evaluateWebScript:[NSString stringWithFormat:@"gameInstance.SendMessage('Button', 'ReceiveMessage', '%@')", [window title]]];
+        return this;
+    }
+    
+    this.window = [[[NSWindow alloc]
+                    initWithContentRect:NSMakeRect(0, 0, 1024, 768)
+                    styleMask:NSTitledWindowMask | NSClosableWindowMask | NSMiniaturizableWindowMask
+                    backing:NSBackingStoreBuffered
+                    defer:false
+                    ] autorelease];
+    this.window.center();
+    this.window.makeKeyAndOrderFront_(this.window);
+    this.createWebView(path);
+    threadDictionary[identifier] = this.window;
+    
+    var closeButton = this.window.standardWindowButton(NSWindowCloseButton);
+    closeButton.setCOSJSTargetFunction(function(sender) {
+                                       this.window.close();
+                                       threadDictionary.removeObjectForKey(identifier);
+                                       COScript.currentCOScript().setShouldKeepAround_(false);
+                                       });
+    
+    var windowObject = this.window.contentView().subviews()[0].windowScriptObject();
+    var finishUnityLoad = [windowObject evaluateWebScript:[NSString stringWithFormat:@"finishUnityLoad"]];
+    log ("test0 js: " + finishUnityLoad);
+    log ("test0 cmp 1: " + (finishUnityLoad == "1"));
+    log ("test0 cmp undef: " + (finishUnityLoad == "undefined"));
+    
+    //log ("test0 delay0: " + [windowObject evaluateWebScript:[NSString stringWithFormat:@"gameInstance.SendMessage('Button', 'ReceiveMessage', '%@')", [window title]]]);
+    log ("test0 delay1: " + [windowObject evaluateWebScript:[NSString stringWithFormat:@"setTimeout(function(){ gameInstance.SendMessage('Button', 'ReceiveMessage', '%@'); }, 18000)", [window title]]]);
+    
+    return this;
+}
+
+/**
+ * Create webview in window
+ *
+ * @param {String} path: relative export path of exported json file
+ * @returns {NSWebview}
+ */
+function createWebView (path) {
+    var webviewFrame = NSMakeRect(0, 0, 1024, 768);
+    var webviewFolder   = COScript.currentCOScript().env().scriptURL.path().stringByDeletingLastPathComponent()  + "/FDPreview/";
+    var webviewHtmlFile = webviewFolder + "index.html";
+    var requestUrl      = [NSURL fileURLWithPath:webviewHtmlFile];
+    var urlRequest      = [NSMutableURLRequest requestWithURL:requestUrl];
+    
+    this.webView = WebView.new();
+    this.webView.initWithFrame(webviewFrame);
+    this.webView.mainFrame().loadRequest(urlRequest);
+    this.window.contentView().addSubview(this.webView);
+    this.window.setTitle(path);
+
+    return this;
+}
+
+/**
+ * Get export message and copy relativePath in pasteboard
+ *
+ * @param {String} name: UI name
+ * @param {String} relativePath: relative export path of exported json file
+ * @param {String} exportPath: absolute UI export path
+ * @returns {String} alertMessage
+ */
+function getExportMessage (name, relativePath, exportPath) {
+    var alertMessage = name + ".json and images are saved to: " + exportPath + "\n";
+    
+    if (repeatImages.length > 0) {
+        alertMessage = alertMessage + "\nwith the following images repeat: \n";
+        for (var i = 0; i < repeatImages.length; i++) {
+            alertMessage = alertMessage + (i+1) + ". " + repeatImages[i] + "\n";
+        }
+    }
+    if (wrongGroups.length > 0) {
+        alertMessage = alertMessage + "\nwith more than one components in the groups: \n";
+        for (var i = 0; i < wrongGroups.length; i++) {
+            alertMessage = alertMessage + (i+1) + ". " + wrongGroups[i] + "\n";
+        }
+    }
+    var pasteboard = NSPasteboard.generalPasteboard();
+    pasteboard.clearContents();
+    pasteboard.writeObjects([relativePath]);
+    alertMessage = alertMessage + "\nYou can load them in preview by copied path now!";
+    
+    return alertMessage;
+}
+
+/**
+ * Show catch error alert
+ */
+function catchErrorAlert () {
+    var errorMessage;
+    for (var i = 0; i < errorMessages.length; i++) {
+        console.log(errorMessages[i] + "\n");
+        errorMessage = errorMessage + errorMessages[i] + "\n";
+    }
+    [NSApp displayDialog:errorMessage withTitle:@"Error Catched!"];
 }
 

@@ -9,7 +9,9 @@
     <script src="TemplateData/UnityProgress.js"></script>  
     <script src="Build/UnityLoader.js"></script>
     <script>
+      //var finishUnityLoad;
       var gameInstance = UnityLoader.instantiate("gameContainer", "Build/FDPreview.json", {onProgress: UnityProgress});
+      //finishUnityLoad = true;
     </script>
   </head>
   <body>

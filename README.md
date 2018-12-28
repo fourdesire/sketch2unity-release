@@ -2,12 +2,12 @@
 
 This module consists of two parts: **sketch2json** and **json2unity**.
 
-- **sketch2json** is a sketch plugin that generates json files and images in your Sketch file, whcih supports Sketch up to version 52.3 (and Custom panel supports Sketch after version 43).
+- **sketch2json** is a sketch plugin that generates json files and images in your Sketch file, whcih supports Sketch up to version 52.3 (and custom panel supports Sketch after version 43).
 
 - **json2unity** then combines these files into Unity UI!
 
 
-## sketch2json [For Designers]
+## sketch2json [for designers]
 
 ### Usage
 1. Download **sketch2unity-xcode.sketchplugin**.
@@ -16,7 +16,7 @@ This module consists of two parts: **sketch2json** and **json2unity**.
 
 2. Double click **sketch2unity-xcode.sketchplugin** to install the plugin. (or Move the package **sketch2unity-xcode.sketchplugin** to the folder `~/Library/Application Support/com.bohemiancoding.sketch3/Plugins/` to install.)
 
-3. Open Sketch and you'll see that **sketch2unity-xcode.sketchplugin** has been installed and that **Sketch2Unity custom panel** lies in inspector.
+3. Open Sketch and you'll see that **sketch2unity-xcode.sketchplugin** has been installed and that **Sketch2Unity custom panel** lies in Inspector.
    <img src="docs/u3-viewPlugins.png">
 
    Set layout values of groups and symbols for Unity in the custom panel.
@@ -38,6 +38,7 @@ This module consists of two parts: **sketch2json** and **json2unity**.
    To view these files in Finder, use `command + shift + g` to go to plugin folder.
 
 7. Load json file by the copied path if Sketch2Unity doesn't load automatically after pressing OK.
+
    <img src="docs/u7-webglConfirm.png" width="498" height="82">
    <img src="docs/u7-loaded.png">
 
@@ -55,7 +56,7 @@ Arrange layers sharing the same layout properties in a group in order to maintai
 
 #### 2. Group
 Sketch2Unity groups layers automatically to arrange each text layer and image layer in a group respectively in order to fit object structure of Unity.
-It saves layout information for every group, so setting layout values only works for group and symbol. (On the other hand, setting layout values for text layers and bitmap layers is useless.)
+It saves layout information for every group, so setting layout values in custom panel only works for group and symbol. (That is to say, setting layout values for text layers and bitmap layers is useless.)
 
 #### 3. Symbol
 The level of symbol is equivalent to group in the hierachy of layout.
@@ -81,6 +82,7 @@ Handle combined shape as a single image layer.
 
 #### 7. Background
 Set background color by adding a filled shape layer instead of setting background color to artboard.
+
 <img src="docs/c7-backgroundColor.png" width="289" height="878">
 
 #### 8. Line
@@ -90,19 +92,26 @@ Avoid using thickened line to generate shape like rectangle.
 ---
 
 ### Additional Remarks
-* When encountering the following 2 situations, Sketch2Unity will inform users:
-1. there are images with same name
-2. there are more than one components in some group
+When encountering the following two situations, Sketch2Unity will inform users:
+1. there are images with same name;
+2. there are more than one components in one group.
 
    <img src="docs/a-messages.png" width="507" height="356">
 
+Here are proper responses to these two situations:
+1. Confirm whether layer names of different images are different.
+If so, then you can ignore this message; otherwise, rename repeated layer names and export UI again.
+
+2. Check whether created groups change the view of UI.
+If so, undo and arrange your layers according to **Sketch Convention 2**; otherwise, ignore this message.
+
 ---
 
-## json2unity [For Engineers]
+## json2unity [for engineers]
 
 ### Usage
-1. Download **Editor folder** containing FDSketch2Unity.cs, FDUIGeneratorBase.cs, FDUIGeneratorEditor.cs and FDJsonHelper
-2. Add **Editor folder** to your Unity project and Compile
-3. Import exported json files and images folder to Assets folder in Unity
-4. If necessary, put fonts(.ttf, .otf) used in UI in a folder named Resources, and move the folder to **Assets folder**
+1. Clone **json2unity folder**
+2. Add it to your Unity project and Compile.
+3. Import exported json files and images folder to **Assets folder** in Unity.
+4. If necessary, put fonts(.ttf, .otf) used in UI in a folder named Resources, and move the folder to Assets folder.
 5. Right click on the exported json files and Choose `Create > Sketch2Unity > Import` to generate UI.

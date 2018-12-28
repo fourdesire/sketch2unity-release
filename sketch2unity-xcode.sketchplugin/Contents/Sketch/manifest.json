@@ -1,8 +1,11 @@
 {
     "name" : "sketch2unity-xcode",
-    "identifier" : "sketch2unity-xcode",
-    "version" : "1.3.1",
-    "description" : "Export json files for unity",
+    "identifier" : "com.fourdesire.sketch2unity-xcode",
+    "version" : "1.4.0",
+    "description" : "Export UI layout for Unity",
+    "homepage": "https://github.com/fourdesire/sketch2unity-release/tree/develop",
+    "author": "Fourdesire",
+    "authorEmail" : "winnie.hsu@fourdesire.com",
     
     "commands" : [
                   {
