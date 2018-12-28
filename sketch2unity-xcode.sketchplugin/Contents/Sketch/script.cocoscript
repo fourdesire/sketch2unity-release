@@ -525,10 +525,6 @@ function loadWindow (path) {
         this.window.setTitle(path);
         
         var windowObject = this.window.contentView().subviews()[0].windowScriptObject();
-        var finishUnityLoad = [windowObject evaluateWebScript:[NSString stringWithFormat:@"finishUnityLoad"]];
-        log ("test1 js: " + finishUnityLoad);
-        log ("test1 cmp 1: " + (finishUnityLoad == "1"));
-        log ("test1 cmp undef: " + (finishUnityLoad == "undefined"));
         [windowObject evaluateWebScript:[NSString stringWithFormat:@"gameInstance.SendMessage('Button', 'ReceiveMessage', '%@')", [window title]]];
         return this;
     }
@@ -551,15 +547,11 @@ function loadWindow (path) {
                                        COScript.currentCOScript().setShouldKeepAround_(false);
                                        });
     
-    var windowObject = this.window.contentView().subviews()[0].windowScriptObject();
-    var finishUnityLoad = [windowObject evaluateWebScript:[NSString stringWithFormat:@"finishUnityLoad"]];
-    log ("test0 js: " + finishUnityLoad);
-    log ("test0 cmp 1: " + (finishUnityLoad == "1"));
-    log ("test0 cmp undef: " + (finishUnityLoad == "undefined"));
-    
-    //log ("test0 delay0: " + [windowObject evaluateWebScript:[NSString stringWithFormat:@"gameInstance.SendMessage('Button', 'ReceiveMessage', '%@')", [window title]]]);
-    log ("test0 delay1: " + [windowObject evaluateWebScript:[NSString stringWithFormat:@"setTimeout(function(){ gameInstance.SendMessage('Button', 'ReceiveMessage', '%@'); }, 18000)", [window title]]]);
-    
+    // TODO: send message after unity finishes loading
+    //var windowObject = this.window.contentView().subviews()[0].windowScriptObject();
+    //var finishUnityLoad = [windowObject evaluateWebScript:[NSString stringWithFormat:@"finishUnityLoad"]];
+    //[windowObject evaluateWebScript:[NSString stringWithFormat:@"gameInstance.SendMessage('Button', 'ReceiveMessage', '%@')", [window title]]];
+
     return this;
 }
 
